@@ -1,0 +1,6 @@
+{
+  "name": "NOIR HOOKAH",
+  "description": "Elevate the Night — Ultra-luxury Hookah & Sheesha lounge experience, online menu, VIP reservations, and mobile app ecosystem.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
