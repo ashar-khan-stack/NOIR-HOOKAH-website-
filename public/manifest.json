@@ -1,22 +1,39 @@
 {
-  "name": "NOIR HOOKAH — Elevate the Night",
-  "short_name": "NOIR HOOKAH",
-  "description": "Ultra-luxury Hookah & Sheesha lounge experience, online menu, VIP reservations, and mobile app ecosystem.",
+  "id": "/",
+  "name": "NOIR HOOKAH",
+  "short_name": "NOIR",
+  "description": "Elevate the Night.",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
-  "background_color": "#070709",
-  "theme_color": "#0a0a0c",
   "orientation": "portrait-primary",
+  "background_color": "#0a0a0c",
+  "theme_color": "#0a0a0c",
+  "categories": ["food", "lifestyle", "entertainment"],
   "icons": [
     {
-      "src": "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?q=80&w=192&auto=format&fit=crop",
+      "src": "/pwa-192x192.png",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any"
     },
     {
-      "src": "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?q=80&w=512&auto=format&fit=crop",
+      "src": "/pwa-512x512.png",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/pwa-maskable-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
     }
   ]
 }

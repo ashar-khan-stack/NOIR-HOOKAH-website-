@@ -1,4 +1,5 @@
 import { CartItem, Hookah, MenuItem, Order } from '../types';
+import { firestoreService } from './firestoreService';
 
 const CART_STORAGE_KEY = 'noir_cart_v1';
 const ORDERS_STORAGE_KEY = 'noir_orders_v1';
@@ -24,29 +25,16 @@ class CartService {
     }
   }
 
-  private loadOrders(): void {
+  private async loadOrders(): Promise<void> {
     try {
-      const stored = localStorage.getItem(ORDERS_STORAGE_KEY);
-      if (stored) {
-        this.orders = JSON.parse(stored);
+      const fromFirestore = await firestoreService.getAllOrders();
+      if (fromFirestore.length > 0) {
+        this.orders = fromFirestore;
       } else {
-        // Mock sample order for dashboard preview
-        this.orders = [
-          {
-            id: 'ORD-9021',
-            userId: 'usr-9901',
-            tableNumber: 'Table 12 (VIP Lounge)',
-            items: [],
-            subtotal: 5500,
-            tax: 275,
-            discount: 0,
-            total: 5775,
-            paymentMethod: 'lounge_cash',
-            status: 'Preparing',
-            createdAt: new Date().toISOString().split('T')[0],
-          },
-        ];
-        this.saveOrders();
+        const stored = localStorage.getItem(ORDERS_STORAGE_KEY);
+        if (stored) {
+          this.orders = JSON.parse(stored);
+        }
       }
     } catch (e) {
       this.orders = [];
@@ -62,7 +50,7 @@ class CartService {
     }
   }
 
-  private saveOrders(): void {
+  private saveOrdersLocal(): void {
     try {
       localStorage.setItem(ORDERS_STORAGE_KEY, JSON.stringify(this.orders));
     } catch (e) {
@@ -110,7 +98,7 @@ class CartService {
       this.items[existingIndex].quantity += quantity;
     } else {
       const newItem: CartItem = {
-        id: `cart-hk-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+        id: `cart-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
         type: 'hookah',
         item: hookah,
         selectedFlavor: flavor,
@@ -122,6 +110,7 @@ class CartService {
       };
       this.items.push(newItem);
     }
+
     this.saveCart();
   }
 
@@ -134,7 +123,7 @@ class CartService {
       this.items[existingIndex].quantity += quantity;
     } else {
       const newItem: CartItem = {
-        id: `cart-mi-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+        id: `cart-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
         type: 'menu_item',
         item: menuItem,
         quantity,
@@ -142,6 +131,7 @@ class CartService {
       };
       this.items.push(newItem);
     }
+
     this.saveCart();
   }
 
@@ -184,15 +174,14 @@ class CartService {
     return { subtotal, tax, discount, total };
   }
 
-  createOrder(
+  async createOrder(
     userId: string,
     tableNumber: string,
     paymentMethod: 'card' | 'lounge_cash' | 'wallet',
     discountCode: string = ''
-  ): Order {
+  ): Promise<Order> {
     const { subtotal, tax, discount, total } = this.getTotal(discountCode);
-    const newOrder: Order = {
-      id: `ORD-${Math.floor(1000 + Math.random() * 9000)}`,
+    const newOrderData: Omit<Order, 'id' | 'createdAt'> = {
       userId,
       tableNumber,
       items: [...this.items],
@@ -202,28 +191,36 @@ class CartService {
       total,
       paymentMethod,
       status: 'Preparing',
-      createdAt: new Date().toISOString().split('T')[0],
     };
 
-    this.orders.unshift(newOrder);
-    this.saveOrders();
+    const createdOrder = await firestoreService.createOrder(newOrderData);
+    this.orders.unshift(createdOrder);
+    this.saveOrdersLocal();
     this.clearCart();
-    return newOrder;
+    return createdOrder;
   }
 
-  getAllOrders(): Order[] {
+  async getAllOrders(): Promise<Order[]> {
+    const fromFirestore = await firestoreService.getAllOrders();
+    if (fromFirestore.length > 0) {
+      this.orders = fromFirestore;
+    }
     return [...this.orders];
   }
 
-  getOrdersHistory(userId: string): Order[] {
-    return this.orders.filter((o) => o.userId === userId || userId === 'usr-9901');
+  async getOrdersHistory(userId: string): Promise<Order[]> {
+    const userOrders = await firestoreService.getUserOrders(userId);
+    if (userOrders.length > 0) {
+      return userOrders;
+    }
+    return this.orders.filter((o) => o.userId === userId);
   }
 
   updateOrderStatus(orderId: string, status: Order['status']): void {
     const order = this.orders.find((o) => o.id === orderId);
     if (order) {
       order.status = status;
-      this.saveOrders();
+      this.saveOrdersLocal();
     }
   }
 }

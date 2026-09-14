@@ -63,8 +63,15 @@ export const WelcomeAuthGate: React.FC<WelcomeAuthGateProps> = ({
       analytics.trackLogin('Customer_Email');
       onLoginSuccess(user);
       onNavigate('user-dashboard');
-    } catch (err) {
-      setErrorMsg('Invalid login credentials. Please try again.');
+    } catch (err: any) {
+      const code = err?.code;
+      if (code === 'auth/invalid-credential' || code === 'auth/wrong-password' || code === 'auth/user-not-found') {
+        setErrorMsg('Invalid email or password. Please verify your credentials.');
+      } else if (code === 'auth/too-many-requests') {
+        setErrorMsg('Too many failed attempts. Please try again later.');
+      } else {
+        setErrorMsg(err?.message || 'Authentication failed. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
@@ -86,12 +93,23 @@ export const WelcomeAuthGate: React.FC<WelcomeAuthGateProps> = ({
         setLoading(false);
         return;
       }
+      if (password.length < 6) {
+        setErrorMsg('Password must be at least 6 characters long.');
+        setLoading(false);
+        return;
+      }
       const newUser = await authService.register(name, email, phone, password);
       analytics.trackEvent('customer_registration_success', { email });
       onLoginSuccess(newUser);
       onNavigate('user-dashboard');
-    } catch (err) {
-      setErrorMsg('Failed to create account. Please check your information.');
+    } catch (err: any) {
+      if (err?.code === 'auth/email-already-in-use') {
+        setErrorMsg('This email address is already registered. Please log in.');
+      } else if (err?.code === 'auth/weak-password') {
+        setErrorMsg('Password should be at least 6 characters.');
+      } else {
+        setErrorMsg(err?.message || 'Failed to create account. Please check your information.');
+      }
     } finally {
       setLoading(false);
     }
@@ -104,7 +122,7 @@ export const WelcomeAuthGate: React.FC<WelcomeAuthGateProps> = ({
     setErrorMsg('');
     try {
       if (!adminUsername || !adminPassword) {
-        setErrorMsg('Please enter your admin username/email and password.');
+        setErrorMsg('Please enter your admin email and password.');
         setLoading(false);
         return;
       }
@@ -112,8 +130,14 @@ export const WelcomeAuthGate: React.FC<WelcomeAuthGateProps> = ({
       analytics.trackEvent('admin_login_success', { username: adminUsername });
       onLoginSuccess(adminUser);
       onNavigate('admin');
-    } catch (err) {
-      setErrorMsg('Admin authorization failed. Invalid credentials.');
+    } catch (err: any) {
+      if (err?.message?.includes('custom claims')) {
+        setErrorMsg('Access Denied: Account lacks executive custom claims (admin: true, role: "ADMIN").');
+      } else if (err?.code === 'auth/invalid-credential' || err?.code === 'auth/wrong-password' || err?.code === 'auth/user-not-found') {
+        setErrorMsg('Invalid executive credentials. Access restricted.');
+      } else {
+        setErrorMsg(err?.message || 'Admin authorization failed. Invalid credentials.');
+      }
     } finally {
       setLoading(false);
     }

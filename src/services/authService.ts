@@ -1,86 +1,102 @@
+import {
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  signOut,
+  sendPasswordResetEmail,
+  updateProfile,
+  onAuthStateChanged,
+  onIdTokenChanged,
+  User as FirebaseUser,
+  IdTokenResult,
+} from 'firebase/auth';
+import { auth } from '../config/firebase';
+import { firestoreService } from './firestoreService';
 import { User, UserRole } from '../types';
-import { CURRENT_USER_MOCK } from '../data/mockData';
 
-const AUTH_STORAGE_KEY = 'noir_user_session_v1';
-
-/**
- * Storage Wrapper for LocalStorage & Token Management.
- * Currently uses Base64 encoding/obfuscation for demo session persistence.
- * Note: Base64 encoding is NOT encryption. When a production backend API is integrated,
- * replace this obfuscation layer with WebCrypto AES-256-GCM hardware key storage or secure cookies.
- */
-class SecureStorage {
-  private static PREFIX = 'noir_sec_';
-
-  private static encode(data: string): string {
-    try {
-      // Base64 client-side obfuscation (replace with AES-GCM in production)
-      return btoa(encodeURIComponent(data));
-    } catch {
-      return data;
-    }
-  }
-
-  private static decode(cipherText: string): string {
-    try {
-      return decodeURIComponent(atob(cipherText));
-    } catch {
-      return cipherText;
-    }
-  }
-
-  static setItem<T>(key: string, value: T): void {
-    try {
-      const jsonString = JSON.stringify(value);
-      const encoded = this.encode(jsonString);
-      localStorage.setItem(`${this.PREFIX}${key}`, encoded);
-    } catch (err) {
-      console.warn('SecureStorage setItem failed:', err);
-    }
-  }
-
-  static getItem<T>(key: string): T | null {
-    try {
-      const raw = localStorage.getItem(`${this.PREFIX}${key}`) || localStorage.getItem(key);
-      if (!raw) return null;
-      // Handle legacy raw JSON vs obfuscated
-      if (raw.startsWith('{') || raw.startsWith('[')) {
-        return JSON.parse(raw) as T;
-      }
-      const decoded = this.decode(raw);
-      return JSON.parse(decoded) as T;
-    } catch {
-      return null;
-    }
-  }
-
-  static removeItem(key: string): void {
-    localStorage.removeItem(`${this.PREFIX}${key}`);
-    localStorage.removeItem(key);
-  }
+export interface AdminClaims {
+  admin?: boolean;
+  role?: string;
 }
 
 class AuthService {
   private currentUser: User | null = null;
+  private authInitialized = false;
+  private listeners: ((user: User | null) => void)[] = [];
 
   constructor() {
-    this.loadSession();
+    this.initAuthListener();
   }
 
-  private loadSession(): void {
-    try {
-      this.currentUser = SecureStorage.getItem<User>(AUTH_STORAGE_KEY);
-    } catch (e) {
-      this.currentUser = null;
-    }
+  private initAuthListener(): void {
+    // Listen for auth and token state changes
+    onIdTokenChanged(auth, async (firebaseUser: FirebaseUser | null) => {
+      if (firebaseUser) {
+        try {
+          const userObj = await this.buildUserObject(firebaseUser);
+          this.currentUser = userObj;
+        } catch (e) {
+          console.warn('[NOIR Auth] Error building user object from token change:', e);
+        }
+      } else {
+        this.currentUser = null;
+      }
+      this.authInitialized = true;
+      this.notifyListeners();
+    });
   }
 
-  private saveSession(): void {
-    if (this.currentUser) {
-      SecureStorage.setItem<User>(AUTH_STORAGE_KEY, this.currentUser);
+  /**
+   * Builds the application User object by verifying Firebase custom claims
+   * and merging Firestore profile data.
+   * Admin security rule: MUST verify custom claims `admin === true` AND `role === "ADMIN"`.
+   */
+  private async buildUserObject(firebaseUser: FirebaseUser, forceTokenRefresh = false): Promise<User> {
+    const idTokenResult: IdTokenResult = await firebaseUser.getIdTokenResult(forceTokenRefresh);
+    const claims = idTokenResult.claims as AdminClaims;
+
+    // Strict validation: Admin is ONLY determined by server-signed Firebase custom claims
+    const isAdmin = claims.admin === true && claims.role === 'ADMIN';
+    const role: UserRole = isAdmin ? 'ADMIN' : 'USER';
+
+    // Fetch user document from Firestore
+    let firestoreUser = await firestoreService.getUserDoc(firebaseUser.uid);
+
+    if (!firestoreUser) {
+      // First-time initialization of user document in Firestore
+      firestoreUser = {
+        id: firebaseUser.uid,
+        name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'VIP Member',
+        email: firebaseUser.email || '',
+        phone: firebaseUser.phoneNumber || '',
+        role,
+        tier: 'Gold VIP',
+        membershipTier: 'Gold VIP',
+        loyaltyPoints: 100,
+        isAdmin,
+      };
+      await firestoreService.setUserDoc(firebaseUser.uid, firestoreUser);
     } else {
-      SecureStorage.removeItem(AUTH_STORAGE_KEY);
+      // Sync verified role to Firestore user state
+      firestoreUser = {
+        ...firestoreUser,
+        role,
+        isAdmin,
+      };
     }
+
+    return firestoreUser;
+  }
+
+  subscribe(listener: (user: User | null) => void): () => void {
+    this.listeners.push(listener);
+    listener(this.currentUser);
+    return () => {
+      this.listeners = this.listeners.filter((l) => l !== listener);
+    };
+  }
+
+  private notifyListeners(): void {
+    this.listeners.forEach((l) => l(this.currentUser));
   }
 
   getUser(): User | null {
@@ -92,59 +108,79 @@ class AuthService {
   }
 
   isLoggedIn(): boolean {
-    return !!this.currentUser;
+    return !!auth.currentUser && !!this.currentUser;
   }
 
   getUserRole(): UserRole | null {
     if (!this.currentUser) return null;
-    if (this.currentUser.role) return this.currentUser.role;
-    return this.currentUser.isAdmin ? 'ADMIN' : 'USER';
+    return this.currentUser.role || (this.currentUser.isAdmin ? 'ADMIN' : 'USER');
   }
 
   hasRole(role: UserRole): boolean {
     return this.getUserRole() === role;
   }
 
-  async login(email: string, _password?: string): Promise<User> {
-    await new Promise((resolve) => setTimeout(resolve, 600));
-    const user: User = {
-      ...CURRENT_USER_MOCK,
-      email: email || CURRENT_USER_MOCK.email,
-      role: 'USER',
-      isAdmin: false,
-    };
+  /**
+   * User Login with Firebase Authentication
+   */
+  async login(email: string, password?: string): Promise<User> {
+    if (!password) {
+      throw new Error('Password is required for authentication.');
+    }
+    const userCredential = await signInWithEmailAndPassword(auth, email.trim(), password);
+    const user = await this.buildUserObject(userCredential.user, true);
     this.currentUser = user;
-    this.saveSession();
+    this.notifyListeners();
     return user;
   }
 
-  async adminLogin(emailOrUsername: string, _password?: string): Promise<User> {
-    await new Promise((resolve) => setTimeout(resolve, 600));
-    const adminUser: User = {
-      id: 'usr-admin-01',
-      name: 'Executive Admin Desk',
-      email: emailOrUsername || 'admin@noirhookah.com',
-      phone: '+92 300 0000000',
-      role: 'ADMIN',
-      isAdmin: true,
-      tier: 'Black VIP',
-      membershipTier: 'Black VIP',
-      loyaltyPoints: 9999,
-      rewardHistory: [],
-      orderHistory: [],
-      reservationsHistory: [],
-    };
+  /**
+   * Admin Login with Firebase Authentication and strict Custom Claims verification
+   */
+  async adminLogin(emailOrUsername: string, password?: string): Promise<User> {
+    if (!password) {
+      throw new Error('Executive password is required.');
+    }
+    const userCredential = await signInWithEmailAndPassword(auth, emailOrUsername.trim(), password);
+    
+    // Force refresh ID token to get latest custom claims
+    const idTokenResult = await userCredential.user.getIdTokenResult(true);
+    const claims = idTokenResult.claims as AdminClaims;
+
+    const hasAdminClaims = claims.admin === true && claims.role === 'ADMIN';
+
+    if (!hasAdminClaims) {
+      // Sign out unauthorized user immediately
+      await signOut(auth);
+      this.currentUser = null;
+      this.notifyListeners();
+      throw new Error('Access Denied: Account lacks executive custom claims (admin: true, role: "ADMIN").');
+    }
+
+    const adminUser = await this.buildUserObject(userCredential.user, false);
     this.currentUser = adminUser;
-    this.saveSession();
+    this.notifyListeners();
     return adminUser;
   }
 
-  async register(name: string, email: string, phone: string, _password?: string): Promise<User> {
-    await new Promise((resolve) => setTimeout(resolve, 700));
+  /**
+   * User Registration with Firebase Authentication
+   * ALWAYS creates standard USER accounts. Admin role cannot be created.
+   */
+  async register(name: string, email: string, phone: string, password?: string): Promise<User> {
+    if (!password) {
+      throw new Error('Password is required for VIP registration.');
+    }
+    const userCredential = await createUserWithEmailAndPassword(auth, email.trim(), password);
+    
+    if (name) {
+      await updateProfile(userCredential.user, { displayName: name });
+    }
+
     const newUser: User = {
-      id: `usr-${Math.floor(1000 + Math.random() * 9000)}`,
+      id: userCredential.user.uid,
       name,
-      email,
+      email: email.trim(),
       phone,
       role: 'USER',
       isAdmin: false,
@@ -153,8 +189,8 @@ class AuthService {
       loyaltyPoints: 100,
       rewardHistory: [
         {
-          id: 'rw-welcome',
-          title: 'Welcome Member Gift',
+          id: 'rew-welcome',
+          title: 'VIP Welcome Bonus',
           points: 100,
           date: new Date().toISOString().split('T')[0],
         },
@@ -162,33 +198,79 @@ class AuthService {
       orderHistory: [],
       reservationsHistory: [],
     };
+
+    await firestoreService.setUserDoc(userCredential.user.uid, newUser);
     this.currentUser = newUser;
-    this.saveSession();
+    this.notifyListeners();
     return newUser;
   }
 
-  async forgotPassword(_email: string): Promise<boolean> {
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    return true;
-  }
-
-  logout(): void {
-    this.currentUser = null;
-    this.saveSession();
-  }
-
-  addLoyaltyPoints(points: number, reason: string): void {
-    if (!this.currentUser) return;
-    this.currentUser.loyaltyPoints += points;
-    if (this.currentUser.rewardHistory) {
-      this.currentUser.rewardHistory.unshift({
-        id: `rw-${Date.now()}`,
-        title: reason,
-        points,
-        date: new Date().toISOString().split('T')[0],
-      });
+  /**
+   * Send Password Reset Email via Firebase Auth
+   */
+  async sendPasswordReset(email: string): Promise<void> {
+    if (!email) {
+      throw new Error('Email address is required.');
     }
-    this.saveSession();
+    await sendPasswordResetEmail(auth, email.trim());
+  }
+
+  /**
+   * Forgot Password Alias
+   */
+  async forgotPassword(email: string): Promise<void> {
+    return this.sendPasswordReset(email);
+  }
+
+  /**
+   * Complete Sign Out from Firebase Auth
+   */
+  async logout(): Promise<void> {
+    await signOut(auth);
+    this.currentUser = null;
+    this.notifyListeners();
+  }
+
+  /**
+   * Add or Redeem Loyalty Points
+   */
+  async addLoyaltyPoints(points: number, description: string = 'Loyalty adjustment'): Promise<void> {
+    if (!this.currentUser) return;
+    const currentPoints = this.currentUser.loyaltyPoints || 0;
+    const newPoints = Math.max(0, currentPoints + points);
+    const newHistory = [
+      ...(this.currentUser.rewardHistory || []),
+      {
+        id: `rew-${Date.now()}`,
+        title: description,
+        points: Math.abs(points),
+        date: new Date().toISOString().split('T')[0],
+      },
+    ];
+
+    await this.updateProfileDetails({
+      loyaltyPoints: newPoints,
+      rewardHistory: newHistory,
+    });
+  }
+
+  /**
+   * Update Profile Details in Firestore
+   */
+  async updateProfileDetails(updates: Partial<User>): Promise<void> {
+    if (!this.currentUser) return;
+    const uid = this.currentUser.id;
+    // Disallow overriding role or admin status via frontend profile updates
+    const sanitizedUpdates = { ...updates };
+    delete sanitizedUpdates.role;
+    delete sanitizedUpdates.isAdmin;
+
+    await firestoreService.setUserDoc(uid, sanitizedUpdates);
+    this.currentUser = {
+      ...this.currentUser,
+      ...sanitizedUpdates,
+    };
+    this.notifyListeners();
   }
 }
 

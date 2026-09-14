@@ -1,0 +1,87 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && 
+        request.auth.token.admin == true && 
+        request.auth.token.role == 'ADMIN';
+    }
+
+    // Users Collection
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow create: if isAuthenticated() && (
+        isAdmin() || 
+        (
+          request.auth.uid == userId && 
+          request.resource.data.role == 'USER' && 
+          (request.resource.data.loyaltyPoints == 0 || !('loyaltyPoints' in request.resource.data))
+        )
+      );
+      allow update: if isAdmin() || (
+        isOwner(userId) && 
+        !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'loyaltyPoints', 'membershipTier'])
+      );
+      allow delete: if isAdmin();
+    }
+
+    // Public Catalogs: Hookahs, Flavors, Menu, Notifications
+    match /hookahs/{hookahId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /flavors/{flavorId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /menu/{menuId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /notifications/{notificationId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Orders Collection
+    match /orders/{orderId} {
+      allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if isAdmin();
+    }
+
+    // Reservations Collection
+    match /reservations/{reservationId} {
+      allow read: if isAuthenticated() && (
+        resource.data.email == request.auth.token.email || 
+        (resource.data.userId != null && resource.data.userId == request.auth.uid) || 
+        isAdmin()
+      );
+      allow create: if isAuthenticated();
+      allow update, delete: if isAdmin();
+    }
+
+    // Notification Read States per User
+    match /notificationStates/{userId} {
+      allow read, write: if isOwner(userId) || isAdmin();
+    }
+
+    // Test connection doc
+    match /test/{docId} {
+      allow read: if true;
+    }
+  }
+}

@@ -32,7 +32,7 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({ onNavigate, currentU
     setLoading(true);
     analytics.trackCheckoutStart();
 
-    const order = cartService.createOrder(
+    const order = await cartService.createOrder(
       currentUser?.id || 'guest',
       tableNumber,
       paymentMethod,

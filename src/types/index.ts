@@ -42,6 +42,10 @@ export interface Hookah {
   features: string[];
   rating: number;
   isPopular?: boolean;
+  available?: boolean;
+  alloys?: string[];
+  crystalFinish?: string;
+  pairingNotes?: string;
 }
 
 export interface Flavor {
@@ -55,6 +59,10 @@ export interface Flavor {
   price: number; // in PKR Rs.
   image: string;
   isExclusive?: boolean;
+  available?: boolean;
+  pairingNotes?: string;
+  sommelierRecommendations?: string;
+  blendSpecifications?: string;
 }
 
 export interface MenuItem {
@@ -68,6 +76,7 @@ export interface MenuItem {
   rating?: number;
   spicy?: boolean;
   vegan?: boolean;
+  available?: boolean;
 }
 
 export interface CartItem {
@@ -122,8 +131,14 @@ export interface Order {
   discount: number;
   total: number;
   paymentMethod: 'card' | 'lounge_cash' | 'wallet';
-  status: 'Pending' | 'Preparing' | 'Served' | 'Completed' | 'delivered';
+  status: 'Pending' | 'Preparing' | 'Ready' | 'Served' | 'Completed' | 'Cancelled' | 'delivered';
   createdAt: string;
+  customerName?: string;
+  customerEmail?: string;
+  customerPhone?: string;
+  loungeSector?: string;
+  preparationNotes?: string;
+  coalTiming?: string;
 }
 
 export interface User {
@@ -166,7 +181,7 @@ export interface NotificationItem {
   message: string;
   date: string;
   read: boolean;
-  type: 'offer' | 'reservation' | 'order' | 'drop';
+  type: 'offer' | 'reservation' | 'order' | 'drop' | 'announcement' | 'privilege' | 'floor' | 'tasting';
 }
 
 export interface AccentColorOption {

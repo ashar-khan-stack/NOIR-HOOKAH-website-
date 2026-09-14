@@ -1,73 +1,17 @@
 import { Reservation, PrivateEventInquiry } from '../types';
-
-const RESERVATION_STORAGE_KEY = 'noir_reservations_v1';
-const EVENT_STORAGE_KEY = 'noir_events_v1';
+import { firestoreService } from './firestoreService';
 
 class ReservationService {
-  private reservations: Reservation[] = [];
+  private reservationsCache: Reservation[] = [];
   private eventInquiries: PrivateEventInquiry[] = [];
 
-  constructor() {
-    this.loadData();
-  }
-
-  private loadData(): void {
-    try {
-      const storedRes = localStorage.getItem(RESERVATION_STORAGE_KEY);
-      if (storedRes) {
-        this.reservations = JSON.parse(storedRes);
-      } else {
-        // Initialize mock reservation for demo preview
-        this.reservations = [
-          {
-            id: 'RES-88210',
-            name: 'Ahmad Mansoor',
-            phone: '+92 300 8822112',
-            email: 'vip@noirhookah.com',
-            date: new Date().toISOString().split('T')[0],
-            time: '09:00 PM',
-            guests: 4,
-            seatingPreference: 'VIP',
-            specialRequest: 'Obsidian Hookah with Blueberry Mint',
-            status: 'Confirmed',
-            createdAt: new Date().toISOString().split('T')[0],
-          },
-        ];
-        this.saveReservations();
-      }
-
-      const storedEvt = localStorage.getItem(EVENT_STORAGE_KEY);
-      if (storedEvt) {
-        this.eventInquiries = JSON.parse(storedEvt);
-      }
-    } catch (e) {
-      this.reservations = [];
-      this.eventInquiries = [];
-    }
-  }
-
-  private saveReservations(): void {
-    localStorage.setItem(RESERVATION_STORAGE_KEY, JSON.stringify(this.reservations));
-  }
-
   async createReservation(data: Omit<Reservation, 'id' | 'status' | 'createdAt'>): Promise<Reservation> {
-    await new Promise((resolve) => setTimeout(resolve, 800));
-
-    const newReservation: Reservation = {
-      ...data,
-      id: `RES-${Math.floor(10000 + Math.random() * 90000)}`,
-      status: 'Confirmed',
-      createdAt: new Date().toISOString().split('T')[0],
-    };
-
-    this.reservations.unshift(newReservation);
-    this.saveReservations();
+    const newReservation = await firestoreService.createReservation(data);
+    this.reservationsCache.unshift(newReservation);
     return newReservation;
   }
 
   async submitPrivateEventInquiry(data: Omit<PrivateEventInquiry, 'id' | 'status' | 'createdAt'>): Promise<PrivateEventInquiry> {
-    await new Promise((resolve) => setTimeout(resolve, 800));
-
     const newInquiry: PrivateEventInquiry = {
       ...data,
       id: `EVT-${Math.floor(10000 + Math.random() * 90000)}`,
@@ -76,27 +20,34 @@ class ReservationService {
     };
 
     this.eventInquiries.unshift(newInquiry);
-    localStorage.setItem(EVENT_STORAGE_KEY, JSON.stringify(this.eventInquiries));
     return newInquiry;
   }
 
-  getReservations(): Reservation[] {
-    return [...this.reservations];
+  async getReservations(): Promise<Reservation[]> {
+    const fromFirestore = await firestoreService.getAllReservations();
+    if (fromFirestore.length > 0) {
+      this.reservationsCache = fromFirestore;
+    }
+    return this.reservationsCache;
   }
 
-  getAllReservations(): Reservation[] {
-    return [...this.reservations];
+  async getAllReservations(): Promise<Reservation[]> {
+    return this.getReservations();
   }
 
-  getUserReservations(email: string): Reservation[] {
-    return this.reservations.filter((r) => r.email === email || email === 'vip@noirhookah.com');
+  async getUserReservations(email: string): Promise<Reservation[]> {
+    const userRes = await firestoreService.getUserReservations(email);
+    if (userRes.length > 0) {
+      return userRes;
+    }
+    return this.reservationsCache.filter((r) => r.email === email);
   }
 
-  updateReservationStatus(id: string, status: Reservation['status']): void {
-    const res = this.reservations.find((r) => r.id === id);
+  async updateReservationStatus(id: string, status: Reservation['status']): Promise<void> {
+    await firestoreService.updateReservationStatus(id, status);
+    const res = this.reservationsCache.find((r) => r.id === id);
     if (res) {
       res.status = status;
-      this.saveReservations();
     }
   }
 

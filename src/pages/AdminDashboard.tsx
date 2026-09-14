@@ -35,18 +35,24 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate, onLo
   const [orders, setOrders] = useState<Order[]>([]);
   const [currentUser, setCurrentUser] = useState<User | null>(authService.getCurrentUser());
 
-  const loadData = () => {
-    setReservations(reservationService.getAllReservations());
-    setOrders(cartService.getAllOrders());
-    setCurrentUser(authService.getCurrentUser());
+  const loadData = async () => {
+    try {
+      const res = await reservationService.getAllReservations();
+      setReservations(res);
+      const ords = await cartService.getAllOrders();
+      setOrders(ords);
+      setCurrentUser(authService.getCurrentUser());
+    } catch (e) {
+      console.warn('Error loading admin data:', e);
+    }
   };
 
   useEffect(() => {
     loadData();
   }, []);
 
-  const handleUpdateReservationStatus = (id: string, newStatus: any) => {
-    reservationService.updateReservationStatus(id, newStatus);
+  const handleUpdateReservationStatus = async (id: string, newStatus: any) => {
+    await reservationService.updateReservationStatus(id, newStatus);
     loadData();
   };
 
@@ -55,12 +61,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate, onLo
     loadData();
   };
 
-  const handleAdminLogout = () => {
-    authService.logout();
+  const handleAdminLogout = async () => {
+    await authService.logout();
     if (onLogout) {
       onLogout();
     } else {
-      onNavigate('welcome');
+      onNavigate('login');
     }
   };
 

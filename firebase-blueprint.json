@@ -1,0 +1,97 @@
+{
+  "entities": {
+    "User": {
+      "collection": "users",
+      "fields": {
+        "id": { "type": "string", "description": "User UID" },
+        "name": { "type": "string", "description": "Full Name" },
+        "email": { "type": "string", "description": "Email address" },
+        "phone": { "type": "string", "description": "Phone number" },
+        "role": { "type": "string", "description": "USER or ADMIN" },
+        "tier": { "type": "string", "description": "VIP Membership tier" },
+        "loyaltyPoints": { "type": "number", "description": "Accumulated rewards points" },
+        "isAdmin": { "type": "boolean", "description": "Admin status" }
+      }
+    },
+    "Hookah": {
+      "collection": "hookahs",
+      "fields": {
+        "id": { "type": "string", "description": "Hookah ID" },
+        "name": { "type": "string", "description": "Model Name" },
+        "series": { "type": "string", "description": "Series designation" },
+        "price": { "type": "number", "description": "Base price" },
+        "description": { "type": "string", "description": "Detailed description" },
+        "material": { "type": "string", "description": "Crafting material" },
+        "height": { "type": "string", "description": "Physical height" },
+        "image": { "type": "string", "description": "Image asset path" }
+      }
+    },
+    "Flavor": {
+      "collection": "flavors",
+      "fields": {
+        "id": { "type": "string", "description": "Flavor ID" },
+        "name": { "type": "string", "description": "Flavor Name" },
+        "category": { "type": "string", "description": "Category group" },
+        "profile": { "type": "string", "description": "Taste notes" },
+        "intensity": { "type": "number", "description": "Smoke intensity" }
+      }
+    },
+    "MenuItem": {
+      "collection": "menu",
+      "fields": {
+        "id": { "type": "string", "description": "Menu Item ID" },
+        "name": { "type": "string", "description": "Item Name" },
+        "category": { "type": "string", "description": "Category" },
+        "price": { "type": "number", "description": "Price" },
+        "description": { "type": "string", "description": "Item description" }
+      }
+    },
+    "Order": {
+      "collection": "orders",
+      "fields": {
+        "id": { "type": "string", "description": "Order ID" },
+        "userId": { "type": "string", "description": "Customer UID" },
+        "tableNumber": { "type": "string", "description": "Lounge table" },
+        "items": { "type": "array", "description": "Ordered items" },
+        "subtotal": { "type": "number", "description": "Subtotal amount" },
+        "tax": { "type": "number", "description": "Tax" },
+        "discount": { "type": "number", "description": "Discount applied" },
+        "total": { "type": "number", "description": "Final total" },
+        "paymentMethod": { "type": "string", "description": "Payment method" },
+        "status": { "type": "string", "description": "Order status" },
+        "createdAt": { "type": "string", "description": "Timestamp ISO" }
+      }
+    },
+    "Reservation": {
+      "collection": "reservations",
+      "fields": {
+        "id": { "type": "string", "description": "Reservation ID" },
+        "name": { "type": "string", "description": "Guest name" },
+        "phone": { "type": "string", "description": "Guest phone" },
+        "email": { "type": "string", "description": "Guest email" },
+        "date": { "type": "string", "description": "Reservation date" },
+        "time": { "type": "string", "description": "Reservation time" },
+        "guests": { "type": "number", "description": "Number of guests" },
+        "seatingPreference": { "type": "string", "description": "Table zone" },
+        "status": { "type": "string", "description": "Reservation status" }
+      }
+    },
+    "NotificationItem": {
+      "collection": "notifications",
+      "fields": {
+        "id": { "type": "string", "description": "Notification ID" },
+        "title": { "type": "string", "description": "Notification title" },
+        "message": { "type": "string", "description": "Notification text" },
+        "date": { "type": "string", "description": "Time label" },
+        "type": { "type": "string", "description": "Notification type" }
+      }
+    },
+    "NotificationState": {
+      "collection": "notificationStates",
+      "fields": {
+        "userId": { "type": "string", "description": "User UID" },
+        "readNotificationIds": { "type": "array", "description": "Read notification IDs" }
+      }
+    }
+  }
+}

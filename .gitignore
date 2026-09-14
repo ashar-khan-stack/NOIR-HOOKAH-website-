@@ -6,3 +6,10 @@ coverage/
 *.log
 .env*
 !.env.example
+
+# Sensitive credentials & service account keys
+*serviceAccount*.json
+*service-account*.json
+*-firebase-adminsdk-*.json
+service-account.json
+credentials.json
