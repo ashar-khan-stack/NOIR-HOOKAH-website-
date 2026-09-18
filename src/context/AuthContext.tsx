@@ -9,7 +9,7 @@ import {
   updateProfile,
   IdTokenResult,
 } from 'firebase/auth';
-import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '../lib/firebase';
 
 export interface UserProfile {
@@ -212,7 +212,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const updateMemberProfile = async (safeData: { name?: string; phone?: string }) => {
     if (!firebaseUser) throw new Error('No user is currently authenticated.');
 
-    const updates: Partial<UserProfile> = {
+    const updates: Record<string, any> = {
       updatedAt: serverTimestamp(),
     };
     if (typeof safeData.name === 'string' && safeData.name.trim()) {
@@ -222,18 +222,81 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       updates.phone = safeData.phone.trim();
     }
 
-    // Persist to Firestore
     const userRef = doc(db, 'users', firebaseUser.uid);
-    await setDoc(userRef, updates, { merge: true });
+    try {
+      await updateDoc(userRef, updates);
+    } catch (err: any) {
+      if (err?.code === 'not-found' || err?.message?.includes('No document to update')) {
+        await setDoc(userRef, {
+          uid: firebaseUser.uid,
+          email: firebaseUser.email || '',
+          name: updates.name || firebaseUser.displayName || 'VIP Member',
+          phone: updates.phone || '',
+          role: 'USER',
+          membershipTier: 'Gold VIP',
+          loyaltyPoints: 0,
+          tierProgressPercent: 0,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        }, { merge: true });
+      } else {
+        console.error('Failed to update member profile:', err);
+        throw err;
+      }
+    }
 
     // Update Firebase Auth displayName if name changed
     if (updates.name) {
-      await updateProfile(firebaseUser, { displayName: updates.name });
+      try {
+        await updateProfile(firebaseUser, { displayName: updates.name });
+      } catch (authErr) {
+        console.warn('[NOIR Auth] Auth displayName update warning:', authErr);
+      }
     }
 
     // Refresh local user profile
     setUserProfile((prev) => (prev ? { ...prev, ...updates } : null));
   };
+
+  useEffect(() => {
+    const triggerProfileCheck = async () => {
+      if (!loading && firebaseUser && userProfile) {
+        const isPhoneMissing = !userProfile.phone || userProfile.phone.trim() === '';
+        const isNameMissing = !userProfile.name || userProfile.name.trim() === '';
+        
+        if (isPhoneMissing || isNameMissing) {
+          try {
+            const notifId = `onboarding-${firebaseUser.uid}`;
+            const notifRef = doc(db, 'notifications', notifId);
+            const notifSnap = await getDoc(notifRef);
+            
+            if (!notifSnap.exists()) {
+              const onboardingNotif = {
+                title: 'Complete Your Profile',
+                message: 'Your NOIR profile is not complete yet. Complete your profile to get the most out of your NOIR experience.',
+                date: new Date().toLocaleString('en-US', {
+                  month: 'short',
+                  day: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit',
+                }),
+                read: false,
+                type: 'onboarding',
+                actionPath: '/profile',
+                actionLabel: 'Complete Profile',
+                userId: firebaseUser.uid,
+                createdAt: serverTimestamp(),
+              };
+              await setDoc(notifRef, onboardingNotif);
+            }
+          } catch (err) {
+            console.debug('[NOIR Auth] Onboarding notification creation note:', err);
+          }
+        }
+      }
+    };
+    triggerProfileCheck();
+  }, [loading, firebaseUser, userProfile]);
 
   return (
     <AuthContext.Provider

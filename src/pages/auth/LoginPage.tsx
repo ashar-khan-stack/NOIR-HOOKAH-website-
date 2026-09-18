@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { AuthLayout } from '../../layouts/AuthLayout';
-import { Lock, Mail, Eye, EyeOff, ArrowRight, ShieldCheck, AlertCircle } from 'lucide-react';
+import { Lock, Mail, Eye, EyeOff, ArrowRight, AlertCircle } from 'lucide-react';
+import { auth } from '../../lib/firebase';
 
 export const LoginPage: React.FC = () => {
   const { login } = useAuth();
@@ -33,8 +34,19 @@ export const LoginPage: React.FC = () => {
 
       await login(email, password);
       
-      const destination = locationState?.from?.pathname || '/dashboard';
-      navigate(destination, { replace: true });
+      const currentUser = auth.currentUser;
+      if (currentUser) {
+        const tokenResult = await currentUser.getIdTokenResult(true);
+        const claims = tokenResult.claims;
+        const isAdmin = claims.admin === true && claims.role === 'ADMIN';
+        if (isAdmin) {
+          navigate('/admin/dashboard', { replace: true });
+        } else {
+          navigate('/dashboard', { replace: true });
+        }
+      } else {
+        navigate('/dashboard', { replace: true });
+      }
     } catch (err: any) {
       const code = err?.code;
       if (
@@ -172,7 +184,7 @@ export const LoginPage: React.FC = () => {
         </form>
 
         {/* Links section */}
-        <div className="pt-4 border-t border-neutral-800/80 space-y-3 text-center">
+        <div className="pt-4 border-t border-neutral-800/80 text-center">
           <p className="text-xs text-neutral-400">
             Not a VIP member yet?{' '}
             <Link
@@ -182,16 +194,6 @@ export const LoginPage: React.FC = () => {
               Create Account
             </Link>
           </p>
-
-          <div className="pt-2">
-            <Link
-              to="/admin/login"
-              className="inline-flex items-center gap-1.5 text-[11px] uppercase tracking-wider text-neutral-500 hover:text-[#d4af37] transition font-medium focus:outline-none focus:underline"
-            >
-              <ShieldCheck className="w-3.5 h-3.5 text-[#d4af37]/70" />
-              <span>Admin Login</span>
-            </Link>
-          </div>
         </div>
       </div>
     </AuthLayout>

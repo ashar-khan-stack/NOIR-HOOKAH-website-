@@ -52,8 +52,12 @@ service cloud.firestore {
     }
 
     match /notifications/{notificationId} {
-      allow read: if true;
-      allow write: if isAdmin();
+      allow read: if !('userId' in resource.data) || resource.data.userId == null || (isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin()));
+      allow create: if isAuthenticated() && (
+        isAdmin() || 
+        (notificationId == 'onboarding-' + request.auth.uid && request.resource.data.userId == request.auth.uid && request.resource.data.type == 'onboarding')
+      );
+      allow update, delete: if isAdmin();
     }
 
     // Orders Collection
@@ -72,6 +76,14 @@ service cloud.firestore {
       );
       allow create: if isAuthenticated();
       allow update, delete: if isAdmin();
+    }
+
+    // Client Requests
+    match /clientRequests/{requestId} {
+      allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid && request.resource.data.status == 'PENDING';
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
     }
 
     // Notification Read States per User

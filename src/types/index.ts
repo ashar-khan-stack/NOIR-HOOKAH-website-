@@ -181,7 +181,28 @@ export interface NotificationItem {
   message: string;
   date: string;
   read: boolean;
-  type: 'offer' | 'reservation' | 'order' | 'drop' | 'announcement' | 'privilege' | 'floor' | 'tasting';
+  type: 'offer' | 'reservation' | 'order' | 'drop' | 'announcement' | 'privilege' | 'floor' | 'tasting' | 'onboarding';
+  actionPath?: string;
+  actionLabel?: string;
+  userId?: string;
+}
+
+export interface ClientRequest {
+  id: string;
+  userId: string;
+  userName: string;
+  userEmail: string;
+  userPhone: string;
+  requestType: string;
+  membershipPreference: string;
+  reason: string;
+  additionalNote?: string;
+  status: 'PENDING' | 'UNDER REVIEW' | 'APPROVED' | 'REJECTED';
+  adminResponse?: string;
+  createdAt: string;
+  updatedAt: string;
+  reviewedAt?: string;
+  reviewedBy?: string;
 }
 
 export interface AccentColorOption {

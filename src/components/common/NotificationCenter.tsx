@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { NotificationItem } from '../../types';
 import { notificationService } from '../../services/notificationService';
 import { Bell, X, Check, Sparkles, AlertCircle, Calendar, Tag } from 'lucide-react';
@@ -11,6 +12,7 @@ interface NotificationCenterProps {
 export const NotificationCenter: React.FC<NotificationCenterProps> = ({ isOpen, onClose }) => {
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [isPushActive, setIsPushActive] = useState(true);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const update = () => {
@@ -40,6 +42,8 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({ isOpen, 
         return <Sparkles className="w-4 h-4 text-[#f7e7ce]" />;
       case 'offer':
         return <Tag className="w-4 h-4 text-emerald-400" />;
+      case 'onboarding':
+        return <AlertCircle className="w-4 h-4 text-amber-400" />;
       default:
         return <Bell className="w-4 h-4 text-neutral-400" />;
     }
@@ -92,7 +96,13 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({ isOpen, 
               notifications.map((notif) => (
                 <div
                   key={notif.id}
-                  onClick={() => notificationService.markAsRead(notif.id)}
+                  onClick={() => {
+                    notificationService.markAsRead(notif.id);
+                    if (notif.actionPath) {
+                      navigate(notif.actionPath);
+                      onClose();
+                    }
+                  }}
                   className={`p-3.5 rounded-xl border text-xs cursor-pointer transition ${
                     notif.read
                       ? 'bg-[#121216] border-neutral-850 opacity-75'
@@ -111,6 +121,13 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({ isOpen, 
                       <p className="text-neutral-400 text-[11px] mt-1 leading-relaxed">
                         {notif.message}
                       </p>
+                      {notif.actionLabel && (
+                        <div className="mt-2 flex justify-end">
+                          <span className="px-2.5 py-1 bg-[#d4af37]/10 border border-[#d4af37]/30 hover:bg-[#d4af37]/20 transition text-[#d4af37] text-[10px] uppercase tracking-wider font-bold rounded-lg">
+                            {notif.actionLabel}
+                          </span>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>

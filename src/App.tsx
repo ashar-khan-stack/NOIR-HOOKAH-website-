@@ -12,7 +12,6 @@ import { ErrorBoundary } from './components/common/ErrorBoundary';
 import { LoginPage } from './pages/auth/LoginPage';
 import { RegisterPage } from './pages/auth/RegisterPage';
 import { ForgotPasswordPage } from './pages/auth/ForgotPasswordPage';
-import { AdminLoginPage } from './pages/auth/AdminLoginPage';
 import { Forbidden403Page } from './pages/Forbidden403Page';
 import { NotFoundPage } from './pages/NotFoundPage';
 
@@ -27,11 +26,13 @@ import { OrdersHistoryPage } from './pages/member/OrdersHistoryPage';
 import { ReservationsPage } from './pages/member/ReservationsPage';
 import { NotificationsPage } from './pages/member/NotificationsPage';
 import { ProfilePage } from './pages/member/ProfilePage';
+import { ClientAppealPage } from './pages/member/ClientAppealPage';
 
 // Admin Pages
 import { AdminDashboardPage } from './pages/admin/AdminDashboardPage';
 import { AdminCustomersPage } from './pages/admin/AdminCustomersPage';
 import { AdminCustomerDetailPage } from './pages/admin/AdminCustomerDetailPage';
+import { AdminClientRequestsPage } from './pages/admin/AdminClientRequestsPage';
 import { AdminHookahsPage } from './pages/admin/AdminHookahsPage';
 import { AdminFlavorsPage } from './pages/admin/AdminFlavorsPage';
 import { AdminMenuPage } from './pages/admin/AdminMenuPage';
@@ -84,15 +85,7 @@ export const App: React.FC = () => {
                   </PublicOnlyRoute>
                 }
               />
-              <Route
-                path="/admin/login"
-                element={
-                  <PublicOnlyRoute>
-                    <AdminLoginPage />
-                  </PublicOnlyRoute>
-                }
-              />
-              <Route path="/admin-login" element={<Navigate to="/admin/login" replace />} />
+
 
               {/* 403 Forbidden Page */}
               <Route path="/403" element={<Forbidden403Page />} />
@@ -171,6 +164,14 @@ export const App: React.FC = () => {
                 }
               />
               <Route
+                path="/client-appeal"
+                element={
+                  <ProtectedRoute>
+                    <ClientAppealPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
                 path="/notifications"
                 element={
                   <ProtectedRoute>
@@ -209,6 +210,14 @@ export const App: React.FC = () => {
                 element={
                   <AdminRouteGuard>
                     <AdminCustomerDetailPage />
+                  </AdminRouteGuard>
+                }
+              />
+              <Route
+                path="/admin/client-requests"
+                element={
+                  <AdminRouteGuard>
+                    <AdminClientRequestsPage />
                   </AdminRouteGuard>
                 }
               />

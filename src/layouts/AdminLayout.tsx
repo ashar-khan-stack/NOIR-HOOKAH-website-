@@ -35,6 +35,7 @@ const NAV_ITEMS = [
   { path: '/admin/orders', label: 'Orders', icon: ShoppingBag },
   { path: '/admin/reservations', label: 'Reservations', icon: CalendarDays },
   { path: '/admin/customers', label: 'Customers', icon: Users },
+  { path: '/admin/client-requests', label: 'Client Appeals', icon: ShieldCheck },
   { path: '/admin/catalog/hookahs', label: 'Hookahs', icon: Flame },
   { path: '/admin/catalog/flavors', label: 'Flavors', icon: Sparkles },
   { path: '/admin/catalog/menu', label: 'Gourmet Menu', icon: UtensilsCrossed },

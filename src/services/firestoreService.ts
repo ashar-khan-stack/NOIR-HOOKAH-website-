@@ -15,7 +15,7 @@ import {
   writeBatch,
 } from 'firebase/firestore';
 import { db } from '../config/firebase';
-import { Hookah, Flavor, MenuItem, Reservation, Order, NotificationItem, User } from '../types';
+import { Hookah, Flavor, MenuItem, Reservation, Order, NotificationItem, User, ClientRequest } from '../types';
 import { SIGNATURE_HOOKAHS, FLAVORS, MENU_ITEMS, MOCK_NOTIFICATIONS } from '../data/mockData';
 
 // Firestore Collection Names
@@ -28,6 +28,7 @@ export const COLLECTIONS = {
   RESERVATIONS: 'reservations',
   NOTIFICATIONS: 'notifications',
   NOTIFICATION_STATES: 'notificationStates',
+  CLIENT_REQUESTS: 'clientRequests',
 } as const;
 
 export interface NotificationStateDoc {
@@ -613,6 +614,84 @@ class FirestoreService {
     } catch (e) {
       console.error('[NOIR Firestore] deleteNotification error:', e);
       throw e;
+    }
+  }
+
+  /* Client Requests */
+  async createClientRequest(data: Omit<ClientRequest, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> {
+    try {
+      const docRef = await addDoc(collection(db, COLLECTIONS.CLIENT_REQUESTS), {
+        ...data,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      });
+      return docRef.id;
+    } catch (e) {
+      console.error('[NOIR Firestore] createClientRequest error:', e);
+      throw e;
+    }
+  }
+
+  async updateClientRequestStatus(
+    id: string,
+    status: ClientRequest['status'],
+    adminResponse?: string,
+    reviewedBy?: string
+  ): Promise<void> {
+    try {
+      const updates: any = {
+        status,
+        updatedAt: serverTimestamp(),
+      };
+      if (adminResponse !== undefined) {
+        updates.adminResponse = adminResponse;
+      }
+      if (reviewedBy !== undefined) {
+        updates.reviewedBy = reviewedBy;
+        updates.reviewedAt = serverTimestamp();
+      }
+      await updateDoc(doc(db, COLLECTIONS.CLIENT_REQUESTS, id), updates);
+    } catch (e) {
+      console.error('[NOIR Firestore] updateClientRequestStatus error:', e);
+      throw e;
+    }
+  }
+
+  subscribeToUserClientRequests(userId: string, callback: (requests: ClientRequest[]) => void) {
+    if (!userId) return () => {};
+    try {
+      const q = query(
+        collection(db, COLLECTIONS.CLIENT_REQUESTS),
+        where('userId', '==', userId),
+        orderBy('createdAt', 'desc')
+      );
+      return onSnapshot(q, (snapshot) => {
+        const reqs = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })) as ClientRequest[];
+        callback(reqs);
+      }, (err) => {
+        console.error('[NOIR Firestore] subscribeToUserClientRequests error:', err);
+      });
+    } catch (e) {
+      console.error('[NOIR Firestore] subscribeToUserClientRequests exception:', e);
+      return () => {};
+    }
+  }
+
+  subscribeToAllClientRequests(callback: (requests: ClientRequest[]) => void) {
+    try {
+      const q = query(
+        collection(db, COLLECTIONS.CLIENT_REQUESTS),
+        orderBy('createdAt', 'desc')
+      );
+      return onSnapshot(q, (snapshot) => {
+        const reqs = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })) as ClientRequest[];
+        callback(reqs);
+      }, (err) => {
+        console.error('[NOIR Firestore] subscribeToAllClientRequests error:', err);
+      });
+    } catch (e) {
+      console.error('[NOIR Firestore] subscribeToAllClientRequests exception:', e);
+      return () => {};
     }
   }
 }

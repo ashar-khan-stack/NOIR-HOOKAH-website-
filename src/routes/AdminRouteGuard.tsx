@@ -54,7 +54,7 @@ export const AdminRouteGuard: React.FC<AdminRouteGuardProps> = ({ children }) =>
   }
 
   if (!firebaseUser) {
-    return <Navigate to="/admin/login" state={{ from: location }} replace />;
+    return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
   // Strict verification: Admin access requires Firebase custom claims: admin === true AND role === "ADMIN"

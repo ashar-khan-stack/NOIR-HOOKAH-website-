@@ -214,6 +214,26 @@ export const MemberDashboardPage: React.FC = () => {
           </Link>
         </div>
 
+        {/* Client Appeal Section */}
+        <div className="bg-gradient-to-br from-[#1a1a1f] to-[#0a0a0c] border border-[#d4af37]/30 rounded-3xl p-6 md:p-8 flex flex-col md:flex-row items-center justify-between gap-6 shadow-2xl relative overflow-hidden group">
+          <div className="absolute inset-0 bg-[#d4af37]/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
+          <div className="space-y-2 relative z-10 text-center md:text-left">
+            <h3 className="font-serif-luxury font-bold text-xl md:text-2xl text-white">
+              Request Your Place in the <span className="text-gold-gradient">NOIR Circle</span>
+            </h3>
+            <p className="text-sm text-neutral-400 max-w-xl">
+              Elevate your experience. Submit a request to become a NOIR VIP Client and access exclusive privileges.
+            </p>
+          </div>
+          <Link
+            to="/client-appeal"
+            className="whitespace-nowrap relative z-10 px-8 py-3.5 rounded-full font-bold text-xs uppercase tracking-[0.2em] text-[#0a0a0c] bg-gradient-to-r from-[#d4af37] via-[#e6c687] to-[#aa820a] hover:brightness-110 active:scale-[0.98] transition duration-200 shadow-[0_0_20px_rgba(212,175,55,0.25)] flex items-center gap-2"
+          >
+            Become a Client
+            <ChevronRight className="w-4 h-4" />
+          </Link>
+        </div>
+
         {/* Two-Column Grid: Recent Orders & Upcoming Reservations */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Recent Orders Section */}

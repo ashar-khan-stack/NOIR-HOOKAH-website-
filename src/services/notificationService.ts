@@ -136,10 +136,13 @@ class NotificationService {
     // Add remote (or mock fallback)
     const baseList = this.remoteNotifications.length > 0 ? this.remoteNotifications : MOCK_NOTIFICATIONS;
     baseList.forEach((n) => {
-      combinedMap.set(n.id, {
-        ...n,
-        read: this.readIds.has(n.id) || !!n.read,
-      });
+      // ONLY show broadcast or user's own notifications
+      if (!n.userId || n.userId === this.currentUserId) {
+        combinedMap.set(n.id, {
+          ...n,
+          read: this.readIds.has(n.id) || !!n.read,
+        });
+      }
     });
 
     // Add local notifications (order placed, reservation booked, etc.)
