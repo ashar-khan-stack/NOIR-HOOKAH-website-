@@ -8,6 +8,7 @@ import {
   Firestore,
 } from 'firebase/firestore';
 import { getStorage, FirebaseStorage } from 'firebase/storage';
+import { getFunctions, Functions } from 'firebase/functions';
 import { getAnalytics, isSupported, Analytics } from 'firebase/analytics';
 
 // Suppress internal Firestore transport warnings & retry notices in offline/sandbox environments
@@ -35,6 +36,7 @@ export const db: Firestore = initializeFirestore(app, {
   experimentalAutoDetectLongPolling: true,
 });
 export const storage: FirebaseStorage = getStorage(app);
+export const functions: Functions = getFunctions(app, 'us-central1');
 
 // Analytics (safe client-side initialization)
 export let analytics: Analytics | null = null;

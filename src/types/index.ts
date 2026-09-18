@@ -212,3 +212,5 @@ export interface AccentColorOption {
   lightHex: string;
   glowRgb: string;
 }
+
+export * from './errorMonitoring';

@@ -1,5 +1,6 @@
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { Flame, RefreshCw, Home, AlertTriangle } from 'lucide-react';
+import { errorMonitoringService } from '../../services/errorMonitoringService';
 
 interface Props {
   children: ReactNode;
@@ -22,7 +23,15 @@ export class ErrorBoundary extends React.Component<Props, State> {
   }
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error('[NOIR ErrorBoundary] Uncaught render error:', error, errorInfo);
+    if (import.meta.env.DEV) {
+      console.error('[NOIR ErrorBoundary] Uncaught render error:', error, errorInfo);
+    }
+    // Safely dispatch error report to Firestore & Cloud monitoring
+    errorMonitoringService.reportError(error, {
+      errorType: 'react_error',
+      severity: 'critical',
+      componentStack: errorInfo.componentStack || undefined,
+    });
   }
 
   private handleReload = () => {

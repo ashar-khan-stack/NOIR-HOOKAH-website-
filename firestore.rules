@@ -91,6 +91,21 @@ service cloud.firestore {
       allow read, write: if isOwner(userId) || isAdmin();
     }
 
+    // System Errors Collection (Error Monitoring)
+    match /systemErrors/{errorId} {
+      // Error logs & direct Firestore access strictly confidential to verified Executive Admins.
+      // Non-admin clients must ingest anomalies via the secure reportSystemErrorCallable function.
+      allow read, write: if isAdmin();
+    }
+
+    // Admin FCM Push Notification Tokens
+    match /adminFcmTokens/{tokenId} {
+      // Restricted exclusively to verified Executive Admins managing their own registered tokens
+      allow read: if isAdmin();
+      allow create, update: if isAdmin() && request.auth.uid == request.resource.data.userId;
+      allow delete: if isAdmin() && request.auth.uid == resource.data.userId;
+    }
+
     // Test connection doc
     match /test/{docId} {
       allow read: if true;

@@ -42,6 +42,7 @@ import { AdminReservationsPage } from './pages/admin/AdminReservationsPage';
 import { AdminLoungePage } from './pages/admin/AdminLoungePage';
 import { AdminNotificationsPage } from './pages/admin/AdminNotificationsPage';
 import { AdminSettingsPage } from './pages/admin/AdminSettingsPage';
+import { AdminSystemErrorsPage } from './pages/admin/AdminSystemErrorsPage';
 
 // Global Inactivity Monitor within the Router tree
 const InactivityWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -194,6 +195,14 @@ export const App: React.FC = () => {
                 element={
                   <AdminRouteGuard>
                     <AdminDashboardPage />
+                  </AdminRouteGuard>
+                }
+              />
+              <Route
+                path="/admin/system-errors"
+                element={
+                  <AdminRouteGuard>
+                    <AdminSystemErrorsPage />
                   </AdminRouteGuard>
                 }
               />

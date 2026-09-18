@@ -20,6 +20,7 @@ import {
   ShieldCheck,
   ChevronRight,
   ExternalLink,
+  AlertOctagon,
 } from 'lucide-react';
 
 interface AdminLayoutProps {
@@ -31,6 +32,7 @@ interface AdminLayoutProps {
 
 const NAV_ITEMS = [
   { path: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { path: '/admin/system-errors', label: 'System Errors', icon: AlertOctagon, badge: 'Live' },
   { path: '/admin/lounge', label: 'Lounge Ops', icon: Store, badge: 'Live' },
   { path: '/admin/orders', label: 'Orders', icon: ShoppingBag },
   { path: '/admin/reservations', label: 'Reservations', icon: CalendarDays },
