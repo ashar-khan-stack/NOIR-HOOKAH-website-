@@ -1,8 +1,17 @@
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
 import { getAuth, Auth } from 'firebase/auth';
-import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, Firestore } from 'firebase/firestore';
+import {
+  initializeFirestore,
+  persistentLocalCache,
+  persistentMultipleTabManager,
+  setLogLevel,
+  Firestore,
+} from 'firebase/firestore';
 import { getStorage, FirebaseStorage } from 'firebase/storage';
 import { getAnalytics, isSupported, Analytics } from 'firebase/analytics';
+
+// Suppress internal Firestore transport warnings & retry notices in offline/sandbox environments
+setLogLevel('silent');
 
 export const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY || 'AIzaSyCTzD1sRCKJXpYIv6skMLOzIus_bUbVjl4',
@@ -23,7 +32,7 @@ export const db: Firestore = initializeFirestore(app, {
   localCache: persistentLocalCache({
     tabManager: persistentMultipleTabManager(),
   }),
-  experimentalForceLongPolling: true,
+  experimentalAutoDetectLongPolling: true,
 });
 export const storage: FirebaseStorage = getStorage(app);
 
